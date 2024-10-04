@@ -12,7 +12,7 @@ import * as bcrypt from 'bcrypt';
 export class UsersService {
   constructor(private prismaService: PrismaService) {}
 
-  async createUser(data: Prisma.UserCreateInput): Promise<User> {
+  async create(data: Prisma.UserCreateInput): Promise<User> {
     // Verifica se o campo birthDate está no formato string
     if (typeof data.birthDate === 'string') {
       const parts = data.birthDate.split('/');
