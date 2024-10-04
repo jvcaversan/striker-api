@@ -12,35 +12,38 @@ import * as bcrypt from 'bcrypt';
 export class UsersService {
   constructor(private prismaService: PrismaService) {}
 
-  // Criar usuário
-  async create(createUserDto: CreateUserDto) {
-    // Função para converter dd/mm/aaaa para o formato ISO yyyy-mm-dd
-    const [day, month, year] = createUserDto.birthDate.split('/');
-    const birthDateISO = new Date(`${year}-${month}-${day}`);
+  async createUser(data: Prisma.UserCreateInput): Promise<User> {
+    // Verifica se o campo birthDate está no formato string
+    if (typeof data.birthDate === 'string') {
+      const parts = data.birthDate.split('/');
+      if (parts.length === 3) {
+        const [day, month, year] = parts;
+        const isoDate = new Date(`${year}-${month}-${day}`);
 
-    const existingUser = await this.prismaService.user.findUnique({
-      where: { email: createUserDto.email },
-    });
-    // Verificar se a data é válida
-    if (isNaN(birthDateISO.getTime())) {
-      throw new Error('Invalid birthDate format. Expected format: dd/mm/yyyy');
+        // Verifica se a data criada é válida
+        if (isNaN(isoDate.getTime())) {
+          throw new BadRequestException(
+            'Invalid birthDate format. Expected DD/MM/YYYY',
+          );
+        }
+
+        data.birthDate = isoDate; // Atribui a data no formato correto
+      } else {
+        throw new BadRequestException(
+          'Invalid birthDate format. Expected DD/MM/YYYY',
+        );
+      }
     }
 
-    if (existingUser) {
-      throw new BadRequestException('Email already exists');
+    // Hash da senha antes de salvar no banco de dados
+    if (data.password) {
+      data.password = await bcrypt.hash(data.password, 10);
     }
-    const hashedPassword = await bcrypt.hash(createUserDto.password, 10);
-    const userData = {
-      ...createUserDto,
-      birthDate: birthDateISO, // Enviar a data convertida para o Prisma
-      password: hashedPassword, // Armazene a senha criptografada
-    };
 
-    return this.prismaService.user.create({
-      data: userData,
+    return await this.prismaService.user.create({
+      data,
     });
   }
-
   async findAll(): Promise<User[]> {
     return this.prismaService.user.findMany();
   }
@@ -65,7 +68,7 @@ export class UsersService {
 
   async update(
     id: number,
-    updateUserDto: Prisma.UserUpdateInput,
+    updateUserDto: Prisma.UserUpdateInput, // Use o DTO correto aqui
   ): Promise<User> {
     const user = await this.prismaService.user.findUnique({
       where: { id },
@@ -75,7 +78,7 @@ export class UsersService {
       throw new NotFoundException(`User with id ${id} not found`);
     }
 
-    // Verifica se a data de nascimento está no formato esperado
+    // Validação e conversão da data de nascimento
     if (
       updateUserDto.birthDate &&
       typeof updateUserDto.birthDate === 'string'
@@ -85,14 +88,13 @@ export class UsersService {
         const [day, month, year] = parts;
         const isoDate = new Date(`${year}-${month}-${day}`);
 
-        // Verifica se a data criada é válida
         if (isNaN(isoDate.getTime())) {
           throw new BadRequestException(
             'Invalid birthDate format. Expected DD/MM/YYYY',
           );
         }
 
-        updateUserDto.birthDate = isoDate; // Atribui a data no formato correto
+        updateUserDto.birthDate = isoDate;
       } else {
         throw new BadRequestException(
           'Invalid birthDate format. Expected DD/MM/YYYY',
@@ -100,7 +102,13 @@ export class UsersService {
       }
     }
 
-    // Garantir que sempre retorna um usuário
+    // Verifica se uma nova senha foi fornecida e criptografa
+    if (updateUserDto.password) {
+      const salt = await bcrypt.genSalt(10);
+      updateUserDto.password = await bcrypt.hash(updateUserDto.password, salt);
+    }
+
+    // Atualiza o usuário com os dados modificados
     return await this.prismaService.user.update({
       where: { id },
       data: updateUserDto,
