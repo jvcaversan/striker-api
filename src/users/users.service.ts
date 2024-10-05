@@ -10,7 +10,7 @@ import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class UsersService {
-  constructor(private prismaService: PrismaService) {}
+  constructor(private prisma: PrismaService) {}
 
   async create(data: Prisma.UserCreateInput): Promise<User> {
     // Verifica se o campo birthDate está no formato string
@@ -40,17 +40,24 @@ export class UsersService {
       data.password = await bcrypt.hash(data.password, 10);
     }
 
-    return await this.prismaService.user.create({
+    return await this.prisma.user.create({
       data,
     });
   }
   async findAll(): Promise<User[]> {
-    return this.prismaService.user.findMany();
+    return this.prisma.user.findMany({
+      include: {
+        group: true,
+      },
+    });
   }
 
   async findOne(id: number): Promise<User> {
-    const user = await this.prismaService.user.findUnique({
-      where: { id },
+    const user = await this.prisma.user.findUnique({
+      where: { id: id },
+      include: {
+        group: true,
+      },
     });
 
     if (!user) {
@@ -60,17 +67,11 @@ export class UsersService {
     return user;
   }
 
-  async findByEmail(email: string): Promise<User | null> {
-    return this.prismaService.user.findUnique({
-      where: { email },
-    });
-  }
-
   async update(
     id: number,
     updateUserDto: Prisma.UserUpdateInput, // Use o DTO correto aqui
   ): Promise<User> {
-    const user = await this.prismaService.user.findUnique({
+    const user = await this.prisma.user.findUnique({
       where: { id },
     });
 
@@ -109,14 +110,14 @@ export class UsersService {
     }
 
     // Atualiza o usuário com os dados modificados
-    return await this.prismaService.user.update({
+    return await this.prisma.user.update({
       where: { id },
       data: updateUserDto,
     });
   }
 
   async remove(id: number): Promise<User> {
-    const user = await this.prismaService.user.findUnique({
+    const user = await this.prisma.user.findUnique({
       where: { id },
     });
 
@@ -124,7 +125,7 @@ export class UsersService {
       throw new NotFoundException(`User with id ${id} not found`);
     }
 
-    return this.prismaService.user.delete({
+    return this.prisma.user.delete({
       where: { id },
     });
   }
