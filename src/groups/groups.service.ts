@@ -19,12 +19,23 @@ export class GroupsService {
   }
 
   async findAll(): Promise<MatchGroup[]> {
-    return this.prisma.matchGroup.findMany();
+    return this.prisma.matchGroup.findMany({
+      include: {
+        owner: {
+          select: {
+            email: true,
+          },
+        },
+      },
+    });
   }
 
   async findOne(id: number): Promise<MatchGroup> {
     const group = await this.prisma.matchGroup.findUnique({
       where: { id },
+      include: {
+        owner: true,
+      },
     });
     if (!group) {
       throw new NotFoundException(`Group with id ${id} not found`);
