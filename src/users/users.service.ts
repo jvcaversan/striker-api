@@ -1,10 +1,10 @@
+import { CreateGroupDto } from './../groups/dto/create-group.dto';
 import {
   BadRequestException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from 'src/database/prisma.service';
-import { CreateUserDto } from './dto/create-user.dto';
 import { Prisma, User } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 
@@ -14,6 +14,7 @@ export class UsersService {
 
   async create(data: Prisma.UserCreateInput): Promise<User> {
     // Verifica se o campo birthDate está no formato string
+
     if (typeof data.birthDate === 'string') {
       const parts = data.birthDate.split('/');
       if (parts.length === 3) {
@@ -40,7 +41,7 @@ export class UsersService {
       data.password = await bcrypt.hash(data.password, 10);
     }
 
-    return await this.prisma.user.create({
+    return this.prisma.user.create({
       data,
     });
   }
@@ -54,7 +55,7 @@ export class UsersService {
 
   async findOne(id: number): Promise<User> {
     const user = await this.prisma.user.findUnique({
-      where: { id: id },
+      where: { id },
       include: {
         group: true,
       },
@@ -74,7 +75,6 @@ export class UsersService {
     const user = await this.prisma.user.findUnique({
       where: { id },
     });
-
     if (!user) {
       throw new NotFoundException(`User with id ${id} not found`);
     }
@@ -125,7 +125,7 @@ export class UsersService {
       throw new NotFoundException(`User with id ${id} not found`);
     }
 
-    return this.prisma.user.delete({
+    return await this.prisma.user.delete({
       where: { id },
     });
   }

@@ -6,7 +6,6 @@ import {
   Patch,
   Param,
   Delete,
-  NotFoundException,
   ValidationPipe,
   UsePipes,
 } from '@nestjs/common';

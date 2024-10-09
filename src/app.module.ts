@@ -4,7 +4,5 @@ import { GroupsModule } from './groups/groups.module';
 
 @Module({
   imports: [UsersModule, GroupsModule],
-  controllers: [],
-  providers: [],
 })
 export class AppModule {}
